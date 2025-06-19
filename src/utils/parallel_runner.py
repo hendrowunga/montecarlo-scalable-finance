@@ -1,20 +1,21 @@
 import multiprocessing
-from tqdm import tqdm # Library bagus untuk progress bar
+from tqdm import tqdm
 
-def run_parallel(func, tasks, num_processes):
+
+def run_parallel(func, tasks, num_processes, initializer=None, initargs=None):
     """
     Fungsi generik untuk menjalankan tugas secara paralel.
-
-    Args:
-        func (function): Fungsi yang akan dijalankan untuk setiap tugas (misal, _walk).
-        tasks (list): Daftar argumen untuk setiap pemanggilan fungsi.
-        num_processes (int): Jumlah proses worker yang akan dibuat.
-
-    Returns:
-        list: Daftar hasil dari setiap tugas.
+    Mendukung initializer dan chunksize untuk optimasi.
     """
-    # Menggunakan with statement untuk memastikan pool ditutup dengan benar
-    with multiprocessing.Pool(processes=num_processes) as pool:
-        # tqdm akan memberikan kita progress bar yang bagus
-        results = list(tqdm(pool.imap(func, tasks), total=len(tasks), desc=f"Running on {num_processes} cores"))
+    if num_processes is None:
+        num_processes = multiprocessing.cpu_count()
+
+    chunksize = max(1, len(tasks) // (num_processes * 4))
+
+    with multiprocessing.Pool(processes=num_processes,
+                              initializer=initializer,
+                              initargs=initargs) as pool:
+        results = list(tqdm(pool.imap(func, tasks, chunksize=chunksize),
+                            total=len(tasks),
+                            desc=f"Running on {num_processes} cores"))
     return results
